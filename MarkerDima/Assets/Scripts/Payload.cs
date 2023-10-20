@@ -4,8 +4,18 @@ using UnityEngine;
 
 public class Payload : MonoBehaviour, IMarkerUPNP
 {
+    [Header("Угол поворота башни:")]
+    public float RotationAngleY = 30f;
+    [Header("Угол поворота ракетгицы:")]
+    public float RotationAngleX = 30f;
+
+    [Header("Вес полезной нагрузки:")]
+    [SerializeField]
     private float weight = 0f;
-    //public float Weight { get; protected set; }
+    [Header("Физика маркера:")]
+    [SerializeField]
+    private Rigidbody rb;
+
     float IMarkerUPNP.Weight
     {
         get { return weight; }
@@ -17,9 +27,9 @@ public class Payload : MonoBehaviour, IMarkerUPNP
 
 
     // Start is called before the first frame update
-    void Start()
+    void Awake()
     {
-
+        Init();
     }
 
     // Update is called once per frame
@@ -30,7 +40,7 @@ public class Payload : MonoBehaviour, IMarkerUPNP
 
     public void Init()
     {
-
+        rb.mass += weight;
     }
 
     public void EnableUPNP()
@@ -39,6 +49,11 @@ public class Payload : MonoBehaviour, IMarkerUPNP
     }
 
     public void DisavleUPNP()
+    {
+
+    }
+
+    private void RotatePlayloadY()
     {
 
     }
