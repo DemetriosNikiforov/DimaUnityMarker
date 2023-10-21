@@ -1,9 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Xml;
-using Unity.Profiling;
-using Unity.VisualScripting;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -12,23 +6,35 @@ using UnityEngine.UIElements;
 public class Payload : MonoBehaviour, IMarkerUPNP
 {
     [Header("Угол поворота башни:")]
-    public float RotationAngleY = 30f;
-    [Header("Угол поворота ракетгицы:")]
-    public float RotationAngleX = 30f;
+    [SerializeField]
+    private float rotationAngleY = 30f;
+    [Header("Минимальный угол поворота ракетницы:")]
+    [SerializeField]
+    private float minRotationAngleX = -10f;
+    [Header("Максимальный угол поворота ракетницы:")]
+    [SerializeField]
+    private float maxRotationAngleX = 30f;
 
-    public float SpeedRotationY = 0.1f;
+    [Space]
 
-    public float SpeedRotationX = 0.1f;
+    [Header("Скорость поворота башни по оси Y:")]
+    [SerializeField]
+    private float speedRotationY = 0.1f;
+    [Header("скорость поворота ракетницы по оси X:")]
+    [SerializeField]
+    private float speedRotationX = 0.1f;
+
+    [Space]
 
     [Header("Обьект полезной нагрузки для поворота по сои Y:")]
     [SerializeField]
-    private Transform objectYAxisRotation;
+    private Transform playloadRotationY;
 
     [Header("Обьект полезной нагрузки для поворота по сои X:")]
     [SerializeField]
-    private Transform objectXAxisRotation;
+    private Transform playloadRotationX;
 
-
+    [Space]
 
     [Header("Вес полезной нагрузки:")]
     [SerializeField]
@@ -54,31 +60,15 @@ public class Payload : MonoBehaviour, IMarkerUPNP
         Init();
     }
 
-    // Update is called once per frame
-    void FixedUpdate()
+    void Update()
     {
-
-
-        float mouseX = Input.GetAxis("Mouse X");
         if (Input.GetMouseButton(0))
         {
-            //float angleY = ClampAngle(objectYAxisRotation.eulerAngles.y + , -30, 30);
-            //Debug.Log(angleY);
-
-            //objectYAxisRotation.localEulerAngles += Vector3.up * Input.GetAxis("Mouse X") * Time.deltaTime * SpeedRotationY;
-
-            objectYAxisRotation.localEulerAngles += Vector3.up * Input.GetAxis("Mouse X") * Time.deltaTime * SpeedRotationY;
-            objectYAxisRotation.eulerAngles = Vector3.up * ClampAngle(objectYAxisRotation.eulerAngles.y, 330, 30);
-            Debug.Log(objectYAxisRotation.eulerAngles.y);
-
-
-
-            //RotatePlayloadY();
-            //RotatePlayloadX();
+            RotatePlayloadY();
+            RotatePlayloadX();
         }
-
     }
-
+    #region Interface methods
     public void Init()
     {
         rb.mass += weight;
@@ -93,84 +83,56 @@ public class Payload : MonoBehaviour, IMarkerUPNP
     {
 
     }
+    #endregion
 
+    #region Additional methods
+
+    /// <summary>
+    /// Поворачивает элемент полезной нагрузки по оси Y
+    /// </summary>
     private void RotatePlayloadY()
     {
-
-        Vector3 targetPosition = new Vector3(Input.mousePosition.x, Input.mousePosition.y, 0.0f);
-
-
-        targetPosition = Camera.main.ScreenToWorldPoint(targetPosition);
-
-
-
-
-        float mouseX = Input.GetAxis("Mouse X");
-        if (mouseX > 0)
-        {
-            Quaternion rotation = Quaternion.Euler(0, RotationAngleY, 0);
-
-
-            objectYAxisRotation.localRotation = Quaternion.Slerp(objectYAxisRotation.localRotation, rotation, SpeedRotationY);
-        }
-        else if (mouseX < 0)
-        {
-            Quaternion rotation = Quaternion.Euler(0, -RotationAngleY, 0);
-
-
-            objectYAxisRotation.localRotation = Quaternion.Slerp(objectYAxisRotation.localRotation, rotation, SpeedRotationY);
-        }
-
-
-
+        playloadRotationY.localEulerAngles += Vector3.up * Input.GetAxis("Mouse X") * speedRotationY * Time.deltaTime;
+        playloadRotationY.localEulerAngles = Vector3.up * ClampAngle(playloadRotationY.localEulerAngles.y, -rotationAngleY, rotationAngleY);
     }
 
+    /// <summary>
+    /// Поворачивает элемент полезной нагрузки по оси X
+    /// </summary>
     private void RotatePlayloadX()
     {
-        Vector3 targetPosition = new Vector3(Input.mousePosition.x, Input.mousePosition.y, 0.0f);
+        playloadRotationX.localEulerAngles += -1 * Vector3.right * Input.GetAxis("Mouse Y") * speedRotationX * Time.deltaTime;
+        playloadRotationX.localEulerAngles = Vector3.right * ClampAngle(playloadRotationX.localEulerAngles.x, minRotationAngleX, maxRotationAngleX);
 
-
-        targetPosition = Camera.main.ScreenToWorldPoint(targetPosition);
-
-
-
-
-        float mouseY = Input.GetAxis("Mouse Y");
-        if (mouseY > 0)
-        {
-            Quaternion rotation = Quaternion.Euler(-RotationAngleX, objectXAxisRotation.localRotation.y, objectXAxisRotation.localRotation.z);
-
-
-            objectXAxisRotation.localRotation = Quaternion.Slerp(objectYAxisRotation.localRotation, rotation, SpeedRotationX);
-        }
-        else if (mouseY < 0)
-        {
-            Quaternion rotation = Quaternion.Euler(RotationAngleX, objectXAxisRotation.localRotation.y, objectXAxisRotation.localRotation.z);
-
-
-            objectXAxisRotation.localRotation = Quaternion.Slerp(objectYAxisRotation.localRotation, rotation, SpeedRotationX);
-        }
     }
 
+    /// <summary>
+    /// Функция ограничения диапазона угла
+    /// </summary>
+    /// <param name="value">Тукущее значение угла</param>
+    /// <param name="min">Минимальное значение угла</param>
+    /// <param name="max">Максимальное значение угла</param>
+    /// <returns>Возращает угол из диапазона</returns>
     private float ClampAngle(float value, float min, float max)
     {
-
-        if ((min <= value && value<=360) || (0 < value && value <= max))
+        if (value > 180)
         {
-            return value;
-
+            value -= 360;
         }
-        else if(value<min)
+
+        if (value < min)
         {
             return min;
-        }else
+        }
+        else if (value > max)
         {
             return max;
         }
-
-
-
+        return value;
     }
+
+    #endregion
+
 
 }
 
