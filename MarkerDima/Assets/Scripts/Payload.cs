@@ -1,3 +1,6 @@
+using System.Collections;
+using TMPro;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -17,6 +20,9 @@ public class Payload : MonoBehaviour, IMarkerUPNP
 
     [Space]
 
+    [Header("Скорость включения/выключения башни:")]
+    [SerializeField]
+    private float speedEnable = 0.5f;
     [Header("Скорость поворота башни по оси Y:")]
     [SerializeField]
     private float speedRotationY = 0.1f;
@@ -25,6 +31,10 @@ public class Payload : MonoBehaviour, IMarkerUPNP
     private float speedRotationX = 0.1f;
 
     [Space]
+
+    [Header("Обьект полезной нагрузки:")]
+    [SerializeField]
+    private GameObject playload;
 
     [Header("Обьект полезной нагрузки для поворота по сои Y:")]
     [SerializeField]
@@ -43,6 +53,15 @@ public class Payload : MonoBehaviour, IMarkerUPNP
     [SerializeField]
     private Rigidbody rb;
 
+    public float speed = 0.1f;
+    private const float min = 0.322f;
+    private const float max = 1.142f;
+    public float time = 0.1f;
+    [SerializeField]
+    private bool _enable = false;
+    private bool _disable = true;
+
+
     float IMarkerUPNP.Weight
     {
         get { return weight; }
@@ -58,11 +77,24 @@ public class Payload : MonoBehaviour, IMarkerUPNP
     void Awake()
     {
         Init();
+
     }
 
     void Update()
     {
-        if (Input.GetMouseButton(0))
+        if (Input.GetKeyDown(KeyCode.E) && _enable)
+        {
+            DisavleUPNP();
+        }
+        if (!_enable && Input.GetKeyDown(KeyCode.R))
+        {
+            EnableUPNP();
+        }
+
+
+
+
+        if (Input.GetMouseButton(0) && _enable && !_disable)
         {
             RotatePlayloadY();
             RotatePlayloadX();
@@ -76,16 +108,52 @@ public class Payload : MonoBehaviour, IMarkerUPNP
 
     public void EnableUPNP()
     {
+        _disable = false;
+        StartCoroutine(Up());
+
 
     }
 
     public void DisavleUPNP()
     {
+        _disable = true;
+        StartCoroutine(Down());
+
 
     }
+
+    IEnumerator Down()
+    {
+        Vector3 minVector = new Vector3(playload.transform.localPosition.x, min, playload.transform.localPosition.z);
+        while (playload.transform.localPosition.y > min)
+        {
+            playload.transform.localPosition = Vector3.MoveTowards(playload.transform.localPosition, minVector, speed);
+            yield return new WaitForFixedUpdate();
+        }
+        playload.transform.localPosition = minVector;
+        _enable = false;
+
+    }
+
+    IEnumerator Up()
+    {
+        Vector3 maxVector = new Vector3(playload.transform.localPosition.x, max, playload.transform.localPosition.z);
+        while (playload.transform.localPosition.y < max)
+        {
+            playload.transform.localPosition = Vector3.MoveTowards(playload.transform.localPosition, maxVector, speed);
+            yield return new WaitForFixedUpdate();
+        }
+        playload.transform.localPosition = maxVector;
+        _enable = true;
+
+
+    }
+
     #endregion
 
     #region Additional methods
+
+
 
     /// <summary>
     /// Поворачивает элемент полезной нагрузки по оси Y
