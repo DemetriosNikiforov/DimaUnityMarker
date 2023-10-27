@@ -1,10 +1,5 @@
 using System.Collections;
-using TMPro;
-using Unity.VisualScripting;
-using UnityEditor;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class Payload : MonoBehaviour, IMarkerUPNP
 {
@@ -20,9 +15,9 @@ public class Payload : MonoBehaviour, IMarkerUPNP
 
     [Space]
 
-    [Header("Скорость включения/выключения башни:")]
+    [Header("Время включения/выключения башни:")]
     [SerializeField]
-    private float speedEnable = 0.5f;
+    public float smoothTime = 1f;
     [Header("Скорость поворота башни по оси Y:")]
     [SerializeField]
     private float speedRotationY = 0.1f;
@@ -53,11 +48,9 @@ public class Payload : MonoBehaviour, IMarkerUPNP
     [SerializeField]
     private Rigidbody rb;
 
-    public float speed = 0.1f;
-    private const float min = 0.322f;
-    private const float max = 1.142f;
-    public float time = 0.1f;
-    [SerializeField]
+
+    private const float _min = 0.322f;
+    private const float _max = 1.142f;
     private bool _enable = false;
     private bool _disable = true;
 
@@ -100,7 +93,8 @@ public class Payload : MonoBehaviour, IMarkerUPNP
             RotatePlayloadX();
         }
     }
-    #region Interface methods
+
+    #region Custom methods
     public void Init()
     {
         rb.mass += weight;
@@ -109,7 +103,7 @@ public class Payload : MonoBehaviour, IMarkerUPNP
     public void EnableUPNP()
     {
         _disable = false;
-        StartCoroutine(Up());
+        StartCoroutine(UpPlayload());
 
 
     }
@@ -117,42 +111,78 @@ public class Payload : MonoBehaviour, IMarkerUPNP
     public void DisavleUPNP()
     {
         _disable = true;
-        StartCoroutine(Down());
+        StartCoroutine(DownPlayload());
+        StartCoroutine(StartAnglePlayload());
 
 
     }
 
-    IEnumerator Down()
+    /// <summary>
+    /// Процесс выключения полезной нагрузки
+    /// </summary>
+    /// <returns></returns>
+    IEnumerator DownPlayload()
     {
-        Vector3 minVector = new Vector3(playload.transform.localPosition.x, min, playload.transform.localPosition.z);
-        while (playload.transform.localPosition.y > min)
+        float localTime = 0f;
+        Vector3 minVector = new Vector3(playload.transform.localPosition.x, _min, playload.transform.localPosition.z);
+        Vector3 velocity = Vector3.zero;
+        while (localTime < smoothTime)
         {
-            playload.transform.localPosition = Vector3.MoveTowards(playload.transform.localPosition, minVector, speed);
+            playload.transform.localPosition = Vector3.SmoothDamp(playload.transform.localPosition, minVector, ref velocity, smoothTime - localTime);
+            localTime += Time.deltaTime;
+
             yield return new WaitForFixedUpdate();
         }
         playload.transform.localPosition = minVector;
         _enable = false;
 
     }
-
-    IEnumerator Up()
+    /// <summary>
+    /// Возращение углов поворота полезной нагрузки в исходное положение
+    /// </summary>
+    /// <returns></returns>
+    IEnumerator StartAnglePlayload()
     {
-        Vector3 maxVector = new Vector3(playload.transform.localPosition.x, max, playload.transform.localPosition.z);
-        while (playload.transform.localPosition.y < max)
+        float localTime = 0f;
+        Vector3 startAngle = Vector3.zero;
+        float velocity = 0f;
+        float velocityX = 0f;
+
+        while (localTime < smoothTime)
         {
-            playload.transform.localPosition = Vector3.MoveTowards(playload.transform.localPosition, maxVector, speed);
+            playloadRotationX.localEulerAngles = Vector3.right * Mathf.SmoothDampAngle(playloadRotationX.localEulerAngles.x, startAngle.x, ref velocityX, smoothTime - localTime);
+            playloadRotationY.localEulerAngles = Vector3.up * Mathf.SmoothDampAngle(playloadRotationY.localEulerAngles.y, startAngle.y, ref velocity, smoothTime - localTime);
+            localTime += Time.deltaTime;
+
+            yield return new WaitForFixedUpdate();
+        }
+        playloadRotationY.localEulerAngles = startAngle;
+        playloadRotationX.localEulerAngles = startAngle;
+
+    }
+
+    /// <summary>
+    /// Процесс активации полезной нагрузки
+    /// </summary>
+    /// <returns></returns>
+    IEnumerator UpPlayload()
+    {
+
+        float localTime = 0f;
+        Vector3 maxVector = new Vector3(playload.transform.localPosition.x, _max, playload.transform.localPosition.z);
+        Vector3 velocity = Vector3.zero;
+
+        while (localTime < smoothTime)
+        {
+            playload.transform.localPosition = Vector3.SmoothDamp(playload.transform.localPosition, maxVector, ref velocity, smoothTime - localTime);
+            localTime += Time.deltaTime;
+
             yield return new WaitForFixedUpdate();
         }
         playload.transform.localPosition = maxVector;
         _enable = true;
 
-
     }
-
-    #endregion
-
-    #region Additional methods
-
 
 
     /// <summary>
@@ -198,10 +228,7 @@ public class Payload : MonoBehaviour, IMarkerUPNP
         }
         return value;
     }
-
     #endregion
-
-
 }
 
 
