@@ -44,11 +44,20 @@ public class Payload : MonoBehaviour, IMarkerUPNP
     [Header("Вес полезной нагрузки:")]
     [SerializeField]
     private float weight = 0f;
+    [Header("Prefab пули:")]
+    [SerializeField]
+    private GameObject bulletPrefab;
+    [Header("Сила выстрела:")]
+    [SerializeField]
+    private float power = 10f;
+    [Header("Расстояние для корректировки расположения пуль:")]
+    [SerializeField]
+    private Vector3 offsetBullet;
     [Header("Физика маркера:")]
     [SerializeField]
     private Rigidbody rb;
 
-
+    
     private const float _min = 0.322f;
     private const float _max = 1.142f;
     private bool _enable = false;
@@ -87,10 +96,15 @@ public class Payload : MonoBehaviour, IMarkerUPNP
 
 
 
-        if (Input.GetMouseButton(0) && _enable && !_disable)
+        if (Input.GetMouseButton(1) && _enable && !_disable)
         {
             RotatePlayloadY();
             RotatePlayloadX();
+        }
+
+        if (Input.GetMouseButtonDown(0) && _enable && !_disable)
+        {
+            Shoot();
         }
     }
 
@@ -115,6 +129,18 @@ public class Payload : MonoBehaviour, IMarkerUPNP
         StartCoroutine(StartAnglePlayload());
 
 
+    }
+
+    /// <summary>
+    /// функция выстрела
+    /// </summary>
+    void Shoot()
+    {
+        GameObject bullet1 = Instantiate(bulletPrefab, playloadRotationX.position + offsetBullet, playloadRotationX.localRotation);
+        GameObject bullet2 = Instantiate(bulletPrefab, playloadRotationX.position - (Vector3.right * offsetBullet.x) + (Vector3.up * offsetBullet.y), playloadRotationX.localRotation);
+
+        bullet1.GetComponent<Rigidbody>().AddForce(power * playloadRotationX.forward, ForceMode.Impulse);
+        bullet2.GetComponent<Rigidbody>().AddForce(power * playloadRotationX.forward, ForceMode.Impulse);
     }
 
     /// <summary>
